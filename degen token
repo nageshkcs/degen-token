@@ -1,0 +1,56 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+
+contract BookSubscription is ERC20, Ownable {
+    enum BookType { classmate_junior, classmate_senior }
+
+    event BookRedeemed(address indexed account, BookType bookType, uint256 bookGross);
+
+    mapping(address => BookType) public userBooks;
+
+    uint256 public constant classmateJunior_cost = 100;
+    uint256 public constant classmateSenior_cost = 200;
+
+    constructor(address initialOwner) ERC20("DEGEN", "DGN") Ownable(initialOwner) {}
+
+    function mintTokens(address to, uint256 gross) public onlyOwner {
+        _mint(to, gross);
+    }
+
+    function BurnTokens(uint256 gross) public {
+        require(gross > 0, "The gross to destroy must be greater than zero");
+        require(balanceOf(msg.sender) >= gross, "Insufficient funds for token destruction");
+        _burn(msg.sender, gross);
+    }
+
+    function redeemBook(uint8 bookNumber) public {
+        require(bookNumber >= 1 && bookNumber <= 2, "Invalid book number");
+
+        BookType book;
+        uint256 bookGross;
+
+        if (bookNumber == 1) {
+            require(balanceOf(msg.sender) >= classmateJunior_cost, "Insufficient funds for book redemption");
+            book = BookType.classmate_junior;
+            bookGross = classmateJunior_cost;
+            _burn(msg.sender, bookGross);
+        } else {
+            require(balanceOf(msg.sender) >= classmateSenior_cost, "Insufficient funds for book redemption");
+            book = BookType.classmate_senior;
+            bookGross = classmateSenior_cost;
+            _burn(msg.sender, bookGross);
+        }
+
+        userBooks[msg.sender] = book;
+        emit BookRedeemed(msg.sender, book, bookGross);
+    }
+
+    function transferTokens(address recipient, uint256 gross) external {
+        require(recipient != address(0), "Invalid recipient address provided");
+        require(balanceOf(msg.sender) >= gross, "Insufficient funds for token transfer");
+        _transfer(msg.sender, recipient, gross);
+    }
+}
